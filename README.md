@@ -1,18 +1,18 @@
-# 设备文件 · Device Files
+# VolumeLane
 
 在一个网页里查看 Mac 和 Windows 的磁盘容量，浏览、下载、上传、删除文件，以及编辑文本。用一台 Mac 运行服务，通过 Tailscale 访问。
 
-![Device Files 架构与访问流程](docs/images/architecture.svg)
+![VolumeLane 架构与访问流程](docs/images/architecture.svg)
 
 ## Codex Skill · 一句话安装
 
 在要用作主机的 Mac 上启动 Docker Desktop，并登录已启用 MagicDNS 的 Tailscale。打开这台 Mac 上的 Codex，直接粘贴下面这段话。
 
 ```text
-请用 $skill-installer 安装 https://github.com/DesmondYh/device-files/tree/main/skills/device-files ，然后读取该 Skill 并在这台 Mac 上部署 Device Files。请保留现有服务和配置，验证成功后给我 Tailscale 访问地址。
+请用 $skill-installer 安装 https://github.com/DesmondYh/device-files/tree/main/skills/device-files ，然后读取该 Skill 并在这台 Mac 上部署 VolumeLane。请保留现有服务和配置，验证成功后给我 Tailscale 访问地址。
 ```
 
-已安装 [Device Files Skill](skills/device-files) 可以直接输入 `$device-files 部署 Device Files`。部署脚本会生成凭据、构建并启动 Docker 网页、安装 Mac 接入程序、配置并验证 Tailscale 入口。
+已安装 [VolumeLane Skill](skills/device-files) 可以直接输入 `$device-files 部署 VolumeLane`。部署脚本会生成凭据、构建并启动 Docker 网页、安装 Mac 接入程序、配置并验证 Tailscale 入口。
 
 <details>
 <summary>用终端安装</summary>
@@ -28,6 +28,8 @@ bash install/setup-mac.sh
 </details>
 
 ## 效果图
+
+以下为更名前的实拍界面。
 
 ### 存储总览
 
@@ -46,6 +48,8 @@ bash install/setup-mac.sh
 - **想把外置盘当成共享网盘。** 让 `$device-files` 接入已挂载的外置盘目录。网页可以上传单个最大 1 GiB 的文件，也可以创建文件夹。需要从访达或 Windows 文件资源管理器读写同一目录时，配置 [SMB 网络盘](docs/smb.md)。
 
 网页通过 Tailscale Serve 校验安装时的账号。文件留在各自的设备上，网页删除会直接删除对应文件。
+
+总览页显示 Mac 主机到已接入设备的 Tailscale 往返延迟，按局域网和跨网分组，并标明直连或中继。文件传输体验还取决于链路带宽和文件大小。
 
 ## 许可证
 

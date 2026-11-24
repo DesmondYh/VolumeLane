@@ -46,11 +46,12 @@ type Entry struct {
 }
 
 type Agent struct {
-	cfg     AgentConfig
-	mu      sync.Mutex
-	writeMu sync.Mutex
-	cached  Storage
-	refresh time.Time
+	cfg       AgentConfig
+	mu        sync.Mutex
+	writeMu   sync.Mutex
+	cached    Storage
+	refresh   time.Time
+	latencies latencyCache
 }
 
 type AgentConfig struct {
@@ -59,7 +60,7 @@ type AgentConfig struct {
 	ListTailnet bool             `json:"listTailnet"`
 	ProxyTarget string           `json:"proxyTarget,omitempty"`
 	ProxyHost   string           `json:"proxyHost,omitempty"`
-	ProxyListen string `json:"proxyListen,omitempty"`
+	ProxyListen string           `json:"proxyListen,omitempty"`
 	Workspace   *WorkspaceConfig `json:"workspace,omitempty"`
 }
 
@@ -252,6 +253,12 @@ func (a *Agent) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		a.tailnet(w, r)
+	case "/latency":
+		if !read {
+			apiError(w, 405, "不支持此操作。")
+			return
+		}
+		a.latency(w, r)
 	case "/file":
 		if r.Method == http.MethodPut {
 			a.saveFile(w, r)

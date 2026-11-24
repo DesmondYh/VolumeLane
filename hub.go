@@ -360,6 +360,8 @@ func (h *Hub) serveAuthorized(w http.ResponseWriter, r *http.Request, authorized
 	switch r.URL.Path {
 	case "/api/devices":
 		h.devices(w, r)
+	case "/api/latency":
+		h.latency(w, r)
 	case "/api/storage":
 		h.fileRequest(w, r, "/storage")
 	case "/api/list":
