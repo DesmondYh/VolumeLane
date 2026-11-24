@@ -1,0 +1,21 @@
+name: device-files
+services:
+  web:
+    build: .
+    image: device-files:local
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18766:8080"
+    volumes:
+      - state:/state:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      start_interval: 2s
+      start_period: 8s
+    user: "65534:65534"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+volumes:
+  state:

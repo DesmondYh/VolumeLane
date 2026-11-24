@@ -1,0 +1,11 @@
+**
+!go.mod
+!go.sum
+!*.go
+!Dockerfile
+!web
+!web/**
+!install
+!install/Install.command
+!install/Install.bat
+!install/Install.ps1

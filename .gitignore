@@ -1,0 +1,11 @@
+.DS_Store
+.env
+*.pem
+*.key
+*.zip
+*.log
+agent.json
+hub.json
+*.local.json
+/device-files
+/install/device-files*
