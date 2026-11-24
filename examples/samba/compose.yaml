@@ -1,0 +1,19 @@
+name: device-files-smb
+services:
+  samba:
+    build:
+      context: .
+      args:
+        HOST_UID: ${HOST_UID:-501}
+    ports:
+      - '127.0.0.1:1445:445'
+    volumes:
+      - type: bind
+        source: ${SMB_SHARE_PATH:?Set the already-mounted external directory}
+        target: /shared
+        bind:
+          create_host_path: false
+      - samba-state:/var/lib/samba
+    restart: unless-stopped
+volumes:
+  samba-state:
