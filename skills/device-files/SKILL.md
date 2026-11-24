@@ -7,7 +7,7 @@ description: Install or troubleshoot VolumeLane (formerly Device Files), a self-
 
 ## Deploy the Mac host
 
-1. Run on the Mac that will host VolumeLane, under the signed-in desktop user. Reuse the user’s checkout when available. If the Skill was installed separately, clone `https://github.com/DesmondYh/device-files.git` into a suitable local folder. Use the official GitHub source archive for `main` if cloning is unavailable.
+1. Run on the Mac that will host VolumeLane, under the signed-in desktop user. Reuse the user’s checkout when available. If the Skill was installed separately, clone `https://github.com/DesmondYh/VolumeLane.git` into a suitable local folder. Use the official GitHub source archive for `main` if cloning is unavailable.
 2. Verify Docker Desktop is running and Tailscale is signed in with a personal identity in a tailnet with MagicDNS enabled. Let the user complete sign-in or macOS folder permission prompts if they appear.
 3. From the repository root, inspect and run `bash install/setup-mac.sh`. It builds the Docker hub, starts the host agent with `launchd`, configures Tailscale Serve, and checks the private endpoint. Preserve existing services if setup reports a conflict. For an already installed host, verify its current endpoint before proposing an update.
 4. Return the verified Tailscale URL. When available, check the dashboard shows the host and its disks. The web origin trusts identity forwarded by Tailscale Serve. Keep the origin loopback-bound and retain the configured owner login.
