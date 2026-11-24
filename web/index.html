@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>设备文件</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div class="workspace">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-icon" aria-hidden="true"></span><span>设备文件</span></div>
+      <button class="overview-link" id="home" type="button" aria-current="page"><span class="overview-icon" aria-hidden="true"></span>存储总览</button>
+      <button class="overview-link cluster-link" id="cluster-nav" type="button"><span class="overview-icon" aria-hidden="true"></span>统一文件库</button>
+      <h2>网络设备</h2>
+      <nav id="devices" aria-label="网络设备"><span class="sidebar-note">正在读取设备…</span></nav>
+      <div class="network"><span class="dot" aria-hidden="true"></span> Tailscale 私有网络</div>
+    </aside>
+    <main>
+      <header class="topline">
+        <div><h1 id="device-title">存储总览</h1><div id="device-meta" class="device-meta"></div></div>
+        <div class="refresh-controls"><span id="last-update" class="secondary">每 20 秒更新</span><button class="button" id="refresh" type="button">刷新</button></div>
+      </header>
+      <div id="notice" role="status"></div>
+      <div id="overview">
+        <p id="overview-status" class="overview-status" role="status">正在读取存储使用情况…</p>
+        <section id="overview-total" class="storage-summary" aria-labelledby="summary-title" hidden>
+          <div class="section-title"><h2 id="summary-title">云盘合计</h2><span id="summary-scope" class="secondary"></span></div>
+          <dl class="summary-metrics">
+            <div><dt>总容量</dt><dd id="summary-total"></dd></div>
+            <div><dt>已使用</dt><dd id="summary-used"></dd></div>
+            <div><dt>可用空间</dt><dd id="summary-free"></dd></div>
+          </dl>
+          <progress id="summary-progress" aria-label="云盘已使用比例"></progress>
+          <p class="secondary summary-foot" id="summary-percent"></p>
+        </section>
+        <section id="overview-devices" class="section" aria-labelledby="overview-devices-title" hidden>
+          <div class="section-title"><h2 id="overview-devices-title">各设备使用情况</h2></div>
+          <div id="device-cards" class="device-cards"></div>
+        </section>
+      </div>
+      <section id="cluster" class="section" aria-label="统一文件库" hidden>
+        <div class="storage-summary cluster-summary">
+          <div><h2>共享空间</h2><p id="workspace-status" class="secondary">正在连接共享外置盘…</p></div>
+          <button class="button primary" id="open-workspace" type="button" disabled>打开共享空间</button>
+        </div>
+        <div class="section-title section"><h2>设备目录</h2></div>
+        <div class="device-cards" id="cluster-devices"></div>
+      </section>
+      <div id="connected" hidden>
+        <div id="connector-tools" class="setup-actions" hidden></div>
+        <section class="section" id="device-capacity" aria-labelledby="disk-title">
+          <div class="section-title"><h2 id="disk-title">存储容量</h2><span id="disk-total" class="secondary"></span></div>
+          <div id="disks" class="disks"></div>
+        </section>
+        <section class="section" aria-labelledby="file-title">
+          <div class="section-title"><h2 id="file-title">浏览文件</h2><span class="secondary">可预览 · 可编辑 · 可下载</span></div>
+          <div id="locations" class="locations" aria-label="文件位置"></div>
+          <div class="file-tools">
+            <button class="button" id="new-folder" type="button" hidden>新建文件夹</button>
+            <button class="button" id="upload" type="button">上传文件</button>
+            <input id="upload-input" type="file" multiple hidden>
+            <span id="upload-status" class="secondary" role="status"></span>
+          </div>
+          <div class="tablebox">
+            <nav id="breadcrumbs" aria-label="文件夹路径"></nav>
+            <div class="quicklinks" id="quicklinks" hidden></div>
+            <div class="table-head" aria-hidden="true"><span>名称</span><span>大小</span><span>修改时间</span></div>
+            <div id="entries" role="list" aria-busy="true"></div>
+            <div id="listing-footer" hidden><span id="entry-count"></span><button class="button" type="button" id="next">加载更多</button></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <div id="editor" class="editor-overlay" hidden>
+    <section class="editor-panel" role="dialog" aria-modal="true" aria-labelledby="editor-title">
+      <header class="editor-head">
+        <div><h2 id="editor-title"></h2><p id="editor-meta" class="secondary"></p></div>
+        <button class="button" id="editor-close" type="button">关闭</button>
+      </header>
+      <p id="editor-message" class="editor-message" role="status"></p>
+      <textarea id="editor-text" class="editor-text" hidden spellcheck="false" aria-label="文件内容"></textarea>
+      <img id="editor-image" class="editor-image" hidden alt="图片预览">
+      <footer class="editor-actions">
+        <span id="editor-status" class="secondary" role="status"></span>
+        <a id="editor-download" class="button" href="#">下载</a>
+        <button id="editor-save" class="button primary" type="button" hidden>保存</button>
+      </footer>
+    </section>
+  </div>
+</body>
+</html>
