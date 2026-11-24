@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1240" height="682" viewBox="0 0 1240 682" role="img" aria-labelledby="title description">
-  <title id="title">Device Files architecture</title>
+  <title id="title">VolumeLane 架构与访问流程</title>
   <desc id="description">The owner uses the web dashboard through Tailscale Serve. The Docker dashboard talks to the Mac mini host agent. Authorized collaborators connect through Tailscale to the Samba service in Docker. The host agent and Samba both read and write the same shared folder on the Lenovo external drive. The dashboard can also reach authorized agents on other computers over Tailscale.</desc>
 
   <defs>
@@ -30,7 +30,7 @@
     <rect width="28" height="28" rx="8" fill="#2860a3"/>
     <path d="M8 10h12M8 14h12M8 18h12" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
   </g>
-  <text x="89" y="53" class="eyebrow">DEVICE FILES</text>
+  <text x="89" y="53" class="eyebrow">VolumeLane</text>
   <text x="48" y="109" class="title">One shared folder, two ways to work</text>
   <text x="48" y="140" class="subtitle">Manage files in the browser or mount the same folder as an SMB drive.</text>
   <path d="M48 160h1144" fill="none" stroke="#d6e0ee"/>
