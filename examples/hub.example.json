@@ -1,0 +1,11 @@
+{
+  "login": "owner@example.net",
+  "localID": "REPLACE_WITH_MAC_MINI_NODE_ID",
+  "localToken": "REPLACE_WITH_THE_SAME_MAC_MINI_AGENT_TOKEN",
+  "remotes": {
+    "REPLACE_WITH_A_REMOTE_NODE_ID": {
+      "name": "MacBook Air",
+      "token": "REPLACE_WITH_A_DIFFERENT_RANDOM_TOKEN"
+    }
+  }
+}
