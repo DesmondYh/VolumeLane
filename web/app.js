@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const state = { devices: [], device: '', storage: null, location: '', path: '', next: 0, sequence: 0, requests: new Map(), capacity: new Map(), cluster: false, editor: null };
+const state = { devices: [], device: '', storage: null, location: '', path: '', next: 0, sequence: 0, listing: null, requests: new Map(), capacity: new Map(), cluster: false, editor: null };
 const labels = new Map([['Downloads','下载'],['Documents','文稿'],['Desktop','桌面'],['Pictures','图片'],['Movies','影片'],['Music','音乐'],['Videos','视频']]);
 const date = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'short', timeStyle: 'short' });
 const clockTime = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -28,8 +28,8 @@ function bytes(value) {
 
 function apiURL(path, values = {}) { return `/api/${path}?${new URLSearchParams(values)}`; }
 
-async function request(path, values) {
-  const response = await fetch(apiURL(path, values), { cache: 'no-store' });
+async function request(path, values, signal) {
+  const response = await fetch(apiURL(path, values), { cache: 'no-store', signal });
   const data = await response.json().catch(() => null);
   if (!response.ok || !data) throw new Error(data?.error || '暂时无法读取，请刷新重试。');
   return data;
@@ -65,8 +65,15 @@ async function uploadRequest(values, file) {
 }
 
 function storageFor(device) {
-  if (!state.requests.has(device)) state.requests.set(device, request('storage',{device}));
-  return state.requests.get(device);
+  const requests = state.requests;
+  if (!requests.has(device)) {
+    const pending = request('storage',{device});
+    requests.set(device,pending);
+    pending.catch(() => {
+      if (requests.get(device) === pending) requests.delete(device);
+    });
+  }
+  return requests.get(device);
 }
 
 function diskTotals(disks) {
@@ -178,6 +185,7 @@ function renderCluster() {
 
 function showCluster() {
   ++state.sequence;
+  cancelListing();
   state.cluster = true;
   state.device = '';
   state.storage = null;
@@ -298,7 +306,22 @@ function isCurrentFolder(device, location, directory) {
   return state.device === device && state.location === location && state.path === directory;
 }
 
-async function browse(location, directory, append = false) {
+function cancelListing() {
+  state.listing?.abort();
+  state.listing = null;
+}
+
+function requestListing(device, location, path, offset) {
+  cancelListing();
+  const controller = new AbortController();
+  state.listing = controller;
+  const pending = request('list',{device,location,path,offset},controller.signal);
+  // A prefetched list can fail before storage is ready to consume it.
+  pending.catch(() => {});
+  return pending;
+}
+
+async function browse(location, directory, append = false, prefetched) {
   if (!state.storage?.locations.some((item) => item.id === location)) return;
   const sequence = ++state.sequence;
   const device = state.device;
@@ -325,7 +348,7 @@ async function browse(location, directory, append = false) {
   $('entries').setAttribute('aria-busy','true');
   $('next').disabled = true;
   try {
-    const listing = await request('list',{device,location,path:directory,offset:state.next});
+    const listing = await (prefetched || requestListing(device,location,directory,state.next));
     if (sequence !== state.sequence) return;
     if (!append) $('entries').replaceChildren();
     if (!listing.count) $('entries').append(element('div','这个文件夹是空的。','empty'));
@@ -431,6 +454,7 @@ async function selectDevice(id, restore = false, preferred = '') {
   const device = state.devices.find((item) => item.id === id);
   if (!device) return;
   const sequence = ++state.sequence;
+  cancelListing();
   state.device = id;
   const remembered = restore ? {location:state.location, path:state.path} : {location:preferred, path:''};
   state.storage = null;
@@ -449,10 +473,14 @@ async function selectDevice(id, restore = false, preferred = '') {
   }
   $('notice').append(element('div','正在读取磁盘…','empty'));
   try {
-    const storage = !restore && state.capacity.has(id) ? state.capacity.get(id) : await storageFor(id);
+    const cached = !restore && state.capacity.get(id);
+    const loadingStorage = cached || storageFor(id);
+    const prefetched = !cached && !restore && !preferred ? requestListing(id,'home','',0) : null;
+    const storage = await loadingStorage;
     if (sequence !== state.sequence) return;
     const initial = remembered.location ? storage.locations.find((item) => item.id === remembered.location) : storage.locations[0];
     if (!initial) {
+      cancelListing();
       blank('文件位置不可用','请返回统一文件库，确认磁盘已连接后再打开。');
       return;
     }
@@ -467,9 +495,10 @@ async function selectDevice(id, restore = false, preferred = '') {
       upgrade.append(element('summary','更新设备接入工具'),connectorInstaller(device));
       $('connector-tools').append(upgrade);
     }
-    browse(initial.id,remembered.path);
+    browse(initial.id,remembered.path,false,initial.id === 'home' ? prefetched : null);
   } catch (error) {
     if (sequence !== state.sequence) return;
+    cancelListing();
     if (device.connector) {
       const windows = device.os === 'windows';
       blank(windows ? 'Windows 文件服务未接入' : 'MacBook 文件服务未接入',
@@ -482,6 +511,7 @@ async function selectDevice(id, restore = false, preferred = '') {
 
 function showOverview() {
   ++state.sequence;
+  cancelListing();
   state.cluster = false;
   $('cluster').hidden = true;
   state.device = '';
@@ -500,23 +530,26 @@ async function refresh(reloadFiles = false) {
   try {
     const devices = await request('devices');
     const changed = JSON.stringify(devices) !== JSON.stringify(state.devices);
+    const previous = state.devices.find((item) => item.id === state.device);
     state.devices = devices;
     state.requests = new Map();
     const updates = [networkStorage()];
     const selected = state.devices.find((item) => item.id === state.device);
-    if (selected && (reloadFiles || changed) && !state.editor) {
+    const selectionChanged = JSON.stringify(selected) !== JSON.stringify(previous);
+    if (selected && (reloadFiles || selectionChanged) && !state.editor) {
       updates.push(selectDevice(selected.id,true));
-    } else if (selected && state.storage) {
-      updates.push(storageFor(selected.id).then((storage) => {
-        if (state.device === selected.id && state.storage) {
-          state.storage = storage;
-          renderStorage();
-        }
-      }).catch(() => {}));
     } else if (!selected && state.device) {
       showOverview();
-    } else if (changed) {
-      renderDevices();
+    } else {
+      if (changed) renderDevices();
+      if (selected && state.storage) {
+        updates.push(storageFor(selected.id).then((storage) => {
+          if (state.device === selected.id && state.storage) {
+            state.storage = storage;
+            renderStorage();
+          }
+        }).catch(() => {}));
+      }
     }
     await Promise.all(updates);
     $('last-update').textContent = `更新于 ${clockTime.format(new Date())}`;
