@@ -4,6 +4,7 @@ const labels = new Map([['Downloads','下载'],['Documents','文稿'],['Desktop'
 const date = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'short', timeStyle: 'short' });
 const clockTime = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 const number = new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 2 });
+let lastLatencyCheck = 0;
 
 function element(tag, text, className) {
   const result = document.createElement(tag);
@@ -156,6 +157,49 @@ async function networkStorage() {
   }));
   if (state.requests === requests && !devices.some((device) => state.capacity.has(device.id))) {
     $('overview-status').textContent = '暂时读不到存储数据，请刷新重试。';
+  }
+}
+
+function renderLatency(scope, samples) {
+  const target = $(`latency-${scope}`);
+  const group = samples.filter((sample) => sample?.scope === scope &&
+    typeof sample.name === 'string' && Number.isFinite(sample.ms) && sample.ms >= 0 &&
+    (sample.method === 'direct' || sample.method === 'relay'));
+  if (!group.length) {
+    target.replaceChildren(element('p','暂无数据','secondary latency-empty'));
+    return;
+  }
+  const list = element('ul','','latency-list');
+  for (const sample of group) {
+    const item = element('li');
+    const device = element('span',sample.name,'latency-device');
+    device.append(element('span',sample.method === 'direct' ? '直连' : '中继','secondary latency-route'));
+    item.append(device,element('strong',`${number.format(sample.ms)} ms`,'latency-value'));
+    list.append(item);
+  }
+  target.replaceChildren(list);
+}
+
+async function refreshLatency(force = false) {
+  const control = $('latency-refresh');
+  if (control.disabled || document.hidden || $('overview').hidden ||
+      (!force && Date.now() - lastLatencyCheck < 60_000)) return;
+  lastLatencyCheck = Date.now();
+  control.disabled = true;
+  const status = $('latency-status');
+  status.textContent = '正在测速…';
+  try {
+    const {samples} = await request('latency');
+    if (!Array.isArray(samples)) throw new Error('Invalid latency results');
+    renderLatency('lan',samples);
+    renderLatency('wan',samples);
+    status.textContent = `更新于 ${clockTime.format(new Date())}`;
+  } catch {
+    renderLatency('lan',[]);
+    renderLatency('wan',[]);
+    status.textContent = '暂时无法测速';
+  } finally {
+    control.disabled = false;
   }
 }
 
@@ -522,6 +566,7 @@ function showOverview() {
   $('connected').hidden = true;
   $('overview').hidden = false;
   renderDevices();
+  refreshLatency();
 }
 
 async function refresh(reloadFiles = false) {
@@ -563,6 +608,7 @@ async function refresh(reloadFiles = false) {
 }
 
 $('refresh').addEventListener('click',() => refresh(true));
+$('latency-refresh').addEventListener('click',() => refreshLatency(true));
 $('home').addEventListener('click',showOverview);
 $('cluster-nav').addEventListener('click',showCluster);
 $('open-workspace').addEventListener('click',() => {
@@ -628,6 +674,13 @@ $('editor-image').addEventListener('error',() => {
 document.addEventListener('keydown',(event) => {
   if (event.key === 'Escape' && !$('editor').hidden) closeEditor();
 });
-setInterval(() => { if (!document.hidden) refresh(); },20000);
-document.addEventListener('visibilitychange',() => { if (!document.hidden) refresh(); });
+function refreshVisible() {
+  if (document.hidden) return;
+  refresh();
+  refreshLatency();
+}
+
+setInterval(refreshVisible,20000);
+document.addEventListener('visibilitychange',refreshVisible);
 refresh();
+refreshLatency();
