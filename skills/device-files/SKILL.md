@@ -1,21 +1,28 @@
 ---
 name: device-files
-description: Deploy or troubleshoot Device Files, a Docker and Tailscale storage dashboard with macOS and Windows agents and an optional writable SMB share. Use for this project's setup, file operations, and latency checks.
+description: Install or troubleshoot Device Files, a self-hosted Mac and Windows file dashboard over Docker and Tailscale. Use for its Mac host setup, device pairing, external workspace, SMB share, or latency checks.
 ---
 
 # Device Files
 
-Locate the Device Files checkout. Use its root `README.md` for setup, `examples/agent.example.json` and `examples/hub.example.json` for local configuration, and `docs/smb.md` when a user wants a network drive. If this skill is installed separately, locate the source checkout or use the repository the user provided.
+## Deploy the Mac host
 
-## Deploy or update
+1. Run on the Mac that will host Device Files, under the signed-in desktop user. Reuse the user’s checkout when available. If the Skill was installed separately, clone `https://github.com/DesmondYh/device-files.git` into a suitable local folder. Use the official GitHub source archive for `main` if Git is unavailable.
+2. Verify Docker Desktop is running and Tailscale is signed in with a personal identity in a tailnet with MagicDNS enabled. Let the user complete sign-in or macOS folder permission prompts if they appear.
+3. From the repository root, inspect and run `bash install/setup-mac.sh`. It builds the Docker hub, starts the host agent with `launchd`, configures Tailscale Serve, and checks the private endpoint. Preserve existing services if setup reports a conflict. For an already installed host, verify its current endpoint before proposing an update.
+4. Return the verified Tailscale URL. When available, check the dashboard shows the host and its disks. The web origin trusts identity forwarded by Tailscale Serve. Keep the origin loopback-bound and retain the configured owner login.
 
-- Identify the host and agents through `tailscale status --json`. Check existing listeners and Tailscale Serve routes before changing ports. The defaults are `127.0.0.1:18766` for the Docker web origin, `127.0.0.1:18776` for the host agent, and Tailscale HTTP port `8766` for users. Preserve other routes when adding or updating this service.
-- The web origin trusts the identity header supplied by Tailscale Serve. Keep the origin loopback-bound and configure `login` for the authorized owner. The hub-to-agent bearer tokens are separate from that identity. Keep live configurations and generated per-agent installer ZIPs private.
-- For the shared workspace, confirm the external volume's actual mount point, UUID, free capacity and write status. Point the agent's `workspace` and the SMB share to the same dedicated directory. Apply the user's storage preferences. If the external disk is absent, stop before creating or writing to what could be an internal fallback path.
+## Add a Mac or Windows device
 
-## Share or troubleshoot
+- Identify the devices the user asks to pair through `tailscale status --json`. Use each selected peer’s `ID` as a key in `remotes`, preserving existing entries. Create a distinct random token of at least 32 characters for each new entry. See `examples/hub.example.json` for its structure.
+- On a Docker install, the active hub configuration is `/state/hub.json` in the `device-files_state` volume. Read and update this copy through Docker. Preserve the owner, local token, existing device tokens, and unrelated settings. Validate the merged JSON and use an atomic replacement in the volume that retains UID/GID `65534:65534` and mode `0600`. Keep a private backup and keep `~/Library/Application Support/Device Files/hub.json` consistent when that file is maintained as a local copy. Restart only the Device Files web service to load the change.
+- In the dashboard, use the matching device’s private installer. Download and run `Install.command` on a Mac or `Install.bat` on Windows. These ZIPs contain credentials. Verify the device’s storage and a directory listing after it connects.
 
-- Use authenticated SMB for authorized collaborators. The SMB account or group grants read/write permission to the dedicated share, while Tailscale rules govern network reachability. Sharing the SMB directory does not authorize expanding access to the owner's web dashboard or other disks.
-- Verify that a disposable file created through SMB appears in the web workspace, that an SMB read returns its original bytes, and that deleting that test file updates both views. Confirm the actual path is on the external volume. Distinguish browser capabilities from SMB client behavior in the result.
-- When access fails, test in order: Tailscale reachability, service listening and routing, authentication, then filesystem permissions. A dashboard that reads but rejects writes can indicate an older agent. For a browser blank page, compare the direct endpoint with the configured proxy path before changing network settings.
-- Measure the operation in question. `tailscale ping` reports a network round trip and whether the route is direct or relayed. Time directory listing and a small disposable file transfer separately to characterize application behavior.
+## Add an external workspace or SMB share
+
+- Confirm the actual external-volume mount point, UUID, free capacity, and write access. Set `workspace` in the host’s `agent.json` with `mount`, `uuid`, and a `path` relative to the volume root. Use a dedicated directory and restart the Device Files host agent. Verify the directory is on the external volume before writing to it.
+- For an SMB network drive, use `docs/smb.md`. Point SMB at the same directory as the web workspace, require an authenticated SMB user or group, and keep access within the tailnet. Verify a disposable file created via SMB appears in the dashboard, then remove the test file and confirm both views update.
+
+## Troubleshoot
+
+Check Tailscale reachability, service listeners and routing, authentication, then filesystem permissions. A dashboard that reads but rejects writes can indicate an older agent. For a blank page, compare the direct Serve URL with any configured proxy path. When measuring performance, record Tailscale round-trip delay and whether it is direct or relayed, then time directory listing or a small test transfer separately.
